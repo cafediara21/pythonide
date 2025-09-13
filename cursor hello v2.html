@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🐍პითონი მოსწავლეებისთვის</title>
+
+<!-- CodeMirror v5 CSS (dark + light themes) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+
+<style>
+  :root{
+    --panel:#0b1220; --muted:#94a3b8;
+    --title-color:#e6eef8;
+    --wrap-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  }
+  /* შენ-ის დიზაინი უცვლელია */
+  .py-ide-wrap{max-width:1100px;margin:28px auto;padding:18px;border-radius:14px;
+    background:var(--wrap-bg);
+    box-shadow:0 8px 30px rgba(2,6,23,0.6);
+    font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  }
+  .editor-card{background:var(--panel);padding:12px;border-radius:12px;min-height:420px;display:flex;flex-direction:column}
+  .toolbar{display:flex;gap:8px;margin-bottom:8px}
+  .btn{background:#0b1220;border:1px solid rgba(255,255,255,0.04);color:#e6eef8;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+  .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .editor{flex:1;border-radius:8px;overflow:hidden}
+  .panel{background:#071224;border-radius:8px;padding:12px;color:var(--muted);font-size:13px;margin-top:12px}
+  .term{background:#000;color:#e6eef8;padding:10px;border-radius:6px;height:280px;overflow:auto;font-family:monospace;font-size:13px;line-height:1.4;white-space:pre-wrap}
+  .small{font-size:12px;color:var(--muted)}
+  .footer{margin-top:12px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .status{font-size:12px;color:#9ad0ff}
+  .CodeMirror{height:100%}
+
+  /* მოაცილებს თეთრ gutter ფონს */
+  .CodeMirror-gutters {
+    background: transparent !important;
+    border-right: none !important;
+  }
+  .CodeMirror, .CodeMirror-scroll {
+    background: #0b1220 !important;
+    color: #e6eef8 !important;
+  }
+
+  /* Calibri for Georgian labels */
+  .georgian { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
+
+  /* Interpreter dot */
+  .status-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-left:8px; vertical-align:middle; background:#888; border:1px solid rgba(0,0,0,0.2); }
+  .status-dot.ok { background: #00c853; }   /* green */
+  .status-dot.busy { background: #ef5350; } /* red */
+  .status-dot.loading { background: #999; }
+
+  /* Day / Night mode support */
+  .py-ide-wrap.day {
+    --panel: #ffffff;
+    --muted: #475569;
+    --title-color: #003399;
+    --wrap-bg: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.98));
+    box-shadow: 0 6px 18px rgba(2,6,23,0.05);
+  }
+  .py-ide-wrap.day .editor-card { background: var(--panel); color: #0b1220; }
+  .py-ide-wrap.day .term { background:#f8fafc; color:#0b1220; font-family:monospace; }
+  .py-ide-wrap.day .btn { background: transparent; border:1px solid rgba(0,0,0,0.06); color: var(--title-color); }
+  .py-ide-wrap.day .btn.secondary { color: var(--muted); }
+  .py-ide-wrap.day .CodeMirror, .py-ide-wrap.day .CodeMirror-scroll { background: #fff !important; color: #0b1220 !important; }
+
+  /* terminal input styling (inline) */
+  .term .prompt { display:inline; }
+  .term input.terminal-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: inherit;
+    font-family: monospace;
+    font-size: 13px;
+    vertical-align: baseline;
+    min-width: 20px;
+  }
+
+  /* keep layout/spacing same as original */
+</style>
+</head>
+<body>
+  <!-- IDE მხოლოდ ამ div-ში -->
+  <div class="py-ide-wrap" id="pyWrap">
+    <header>
+      <h1 class="georgian" style="color:#003399;font-size:22px;margin:0">:: 🐍პითონის პირველი ნაბიჯები</h1>
+    </header>
+
+    <!-- Assignment Instructions -->
+    <div class="assignment-section georgian" style="background:#f8fafc;padding:16px;border-radius:8px;margin-bottom:16px;border-left:4px solid #003399;">
+      <h2 style="color:#003399;font-size:18px;margin:0 0 8px 0">📋 დავალება 1:</h2>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.5;">
+        დაწერეთ პროგრამა 🐍 პითონზე, რომელიც ეკრანზე აჩვენებს ტექსტს. მაგალითად: "Hello World" ან "გამარჯობა მსოფლიო!".
+        <br><strong>მიზანი:</strong> ტექსტის ეკრანზე გამოტანა, print() ფუნქციის გამოყენება.
+      </p>
+    </div>
+
+    <!-- Assignment Status -->
+    <div id="assignmentStatus" class="assignment-status georgian" style="background:#fef3c7;padding:12px;border-radius:8px;margin-bottom:16px;border-left:4px solid #f59e0b;display:none;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="statusIcon" style="font-size:20px;">🎯</span>
+        <span id="statusText" style="color:#92400e;font-weight:bold;">დავალების სტატუსი</span>
+      </div>
+    </div>
+
+    <div class="editor-card">
+      <div class="toolbar">
+        <button id="runBtn" class="btn georgian">▶ გაშვება</button>
+        <button id="stopBtn" class="btn secondary georgian">■ გაჩერება</button>
+        <button id="clearCodeBtn" class="btn secondary georgian">კოდის წაშლა</button>
+        <button id="clearOutputBtn" class="btn secondary georgian">შედეგის წაშლა</button>
+
+        <div style="flex:1"></div>
+
+        <!-- pictogram day/night toggle -->
+        <button id="themeToggle" class="btn secondary georgian" title="ღამე / დღე" aria-label="ღამე/დღე">🌙</button>
+
+        <div style="width:12px"></div>
+
+        <div class="small georgian">ინტერპრეტატორი:<span id="pyStatusDot" class="status-dot loading" title="ინტერპრეტატორის მდგომარეობა"></span></div>
+      </div>
+
+      <div class="editor" id="editor"></div>
+
+      <!-- Console IDE-ს ქვემოთ — changed to div to allow inline input element -->
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong class="georgian" style="color:#fff">ტერმინალი</strong>
+          <span class="georgian" style="color:#94a3b8;font-size:12px;">კოდის შედეგი აქ გამოჩნდება</span>
+        </div>
+        <div id="terminal" class="term" tabindex="0"></div>
+      </div>
+
+      <div class="footer georgian">
+        <div>© დათო მალანია. 2025 - პითონის დავალება</div>
+        <div class="georgian" style="font-size:11px;color:#94a3b8;">ისწავლეთ პროგრამირება მარტივად!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CodeMirror v5 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.js"></script>
+
+  <script>
+  (function(){
+    const runBtn = document.getElementById('runBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearCodeBtn = document.getElementById('clearCodeBtn');
+    const clearOutputBtn = document.getElementById('clearOutputBtn');
+    const terminal = document.getElementById('terminal');
+    const pyStatusDot = document.getElementById('pyStatusDot');
+    const pyWrap = document.getElementById('pyWrap');
+    const themeToggle = document.getElementById('themeToggle');
+
+    const initialCode = ``;
+    const editor = CodeMirror(document.getElementById('editor'), {
+      value: initialCode,
+      mode: 'python',
+      theme: 'material-darker', // dark by default
+      lineNumbers: true,
+      matchBrackets: true,
+      indentUnit: 4,
+      autofocus: true
+    });
+
+    function appendOutput(text){
+      // Append text exactly as received.
+      // Use text nodes so that existing input element remains usable.
+      // Convert to string and keep newlines.
+      const txt = String(text);
+      // If terminal currently has an active input, insert before it; otherwise append normally.
+      const activeInput = terminal.querySelector('input.terminal-input');
+      if(activeInput){
+        // create a text node after the input
+        const after = document.createTextNode(txt);
+        terminal.appendChild(after);
+      }else{
+        terminal.appendChild(document.createTextNode(txt));
+      }
+      // scroll
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+    function clearTerminal(){ terminal.innerHTML = ''; }
+
+    let pyodide = null;
+    let isBusy = false;
+
+    function setInterpreterState(state){
+      // states: 'loading', 'ok', 'busy'
+      pyStatusDot.classList.remove('loading','ok','busy');
+      if(state === 'ok') pyStatusDot.classList.add('ok');
+      else if(state === 'busy') pyStatusDot.classList.add('busy');
+      else pyStatusDot.classList.add('loading');
+    }
+
+    // INPUT handling: when Python calls input(), we'll show the prompt in terminal and
+    // create an inline <input> for the user to type. The prompt text will be displayed,
+    // and when the user presses Enter the input value (without prompt) will be returned.
+    let pendingInputResolve = null;
+    function showPromptAndGetInput(promptText){
+      // Append the prompt text (without newline) so it looks like: "What is your name? "
+      const promptSpan = document.createElement('span');
+      promptSpan.className = 'prompt';
+      promptSpan.textContent = promptText ?? '';
+      terminal.appendChild(promptSpan);
+
+      // create input element
+      const inputEl = document.createElement('input');
+      inputEl.type = 'text';
+      inputEl.className = 'terminal-input';
+      terminal.appendChild(inputEl);
+      inputEl.focus();
+
+      // scroll into view
+      terminal.scrollTop = terminal.scrollHeight;
+
+      return new Promise(resolve => {
+        // store resolver so we can resolve also from other places if needed
+        pendingInputResolve = (value) => {
+          // remove input element and replace with the echoed value + newline
+          try{
+            // find and remove inputEl
+            if(inputEl.parentElement) inputEl.parentElement.removeChild(inputEl);
+          }catch(e){}
+          // echo user input and newline
+          terminal.appendChild(document.createTextNode(String(value) + '\n'));
+          pendingInputResolve = null;
+          terminal.scrollTop = terminal.scrollHeight;
+          resolve(String(value));
+        };
+
+        // enter key handling
+        inputEl.addEventListener('keydown', function(ev){
+          if(ev.key === 'Enter'){
+            ev.preventDefault();
+            const v = inputEl.value;
+            pendingInputResolve && pendingInputResolve(v);
+          } else if (ev.key === 'c' && ev.ctrlKey){
+            // emulate ctrl+c - cancel input
+            ev.preventDefault();
+            pendingInputResolve && pendingInputResolve('');
+          }
+        }, { once: false });
+
+        // optional: blur => still keep input (do nothing)
+      });
+    }
+
+    async function initPyodideAndPackages(){
+      setInterpreterState('loading');
+      try{
+        pyodide = await loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.28.2/full/"
+        });
+        // configure IO
+        pyodide.setStdout({
+          batched: (s) => { appendOutput(s); }
+        });
+        pyodide.setStderr({
+          batched: (s) => { appendOutput(s); }
+        });
+        // setStdin(prompt) can return a Promise (async)
+        pyodide.setStdin({
+          prompt: async (req) => {
+            // req contains the prompt text (may be empty)
+            // We must show it in the terminal and return user input
+            const promptText = req ?? '';
+            // ensure promptText does not include additional newline at end
+            return await showPromptAndGetInput(promptText);
+          }
+        });
+        setInterpreterState('ok');
+      }catch(e){
+        appendOutput('Failed to load Pyodide: ' + e + '\n');
+        setInterpreterState('loading');
+      }
+    }
+    initPyodideAndPackages();
+
+    // ფუნქცია შეცდომების დეტალური ახსნისთვის ტერმინალში
+    function getDetailedErrorExplanation(code, errorOutput = '') {
+      const codeStr = String(code).trim();
+      const codeLower = codeStr.toLowerCase();
+      const errorLower = String(errorOutput).toLowerCase();
+      
+      // შევამოწმებთ Python-ის შეცდომებს პირველ რიგში
+      if (errorLower.includes('syntaxerror') && errorLower.includes('unterminated')) {
+        return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (") ან (\') დახურულია';
+      }
+      
+      if (errorLower.includes('syntaxerror') && errorLower.includes('eol')) {
+        return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (") ან (\') დახურულია';
+      }
+      
+      if (errorLower.includes('syntaxerror') && errorLower.includes('invalid syntax')) {
+        return '❌ შეცდომა: არასწორი სინტაქსი\n💡 რჩევა: შეამოწმეთ, რომ ყველა ფრჩხილი, ბრჭყალი და ორწერტილი სწორად არის დაწერილი';
+      }
+      
+      // შევამოწმებთ ბეჭდვის ფუნქციის შეცდომებს კოდის ანალიზით
+      if (codeLower.includes('print')) {
+        // არასწორი ორთოგრაფია - ქართული სიტყვა ბეჭდვა
+        if (codeLower.includes('ბეჭდვა')) {
+          return '❌ შეცდომა: "ბეჭდვა" უნდა იყოს "print"\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - print ინგლისურად!';
+        }
+        
+        // არასწორი დიდი ასოები - Print, PRINT
+        if (codeStr.match(/\bPrint\s*\(/) || codeStr.match(/\bPRINT\s*\(/)) {
+          return '❌ შეცდომა: print უნდა იყოს მცირე ასოებით\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - print მცირე ასოებით!';
+        }
+        
+        // შემოწმება: printdddd") - print ფუნქციას უნდა მოჰყვეს ღია ფრჩხილი და ღია ბრჭყალი
+        if (codeStr.match(/print[a-zA-Z][^"]*"\s*\)/)) {
+          return '❌ შეცდომა: print ფუნქციას უნდა მოჰყვეს ღია ფრჩხილი და ღია ბრჭყალი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - ღია ფრჩხილი ( და ღია ბრჭყალი " აუცილებელია!';
+        }
+        
+        // შემოწმება: print"dddd") - print ფუნქციას უნდა მოჰყვეს ღია ფრჩხილი
+        if (codeStr.match(/print\s*"[^"]*"\s*\)/)) {
+          return '❌ შეცდომა: print ფუნქციას უნდა მოჰყვეს ღია ფრჩხილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - ღია ფრჩხილი ( აუცილებელია!';
+        }
+        
+        // შემოწმება: print(dddd") - არ არის ღია ბრჭყალი
+        if (codeStr.match(/print\s*\([^"]*"\s*\)/)) {
+          return '❌ შეცდომა: არ არის ღია ბრჭყალი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - ღია ბრჭყალი " აუცილებელია!';
+        }
+        
+        // შემოწმება: print("dddd" - არ არის დახურული ფრჩხილი
+        if (codeStr.match(/print\s*\(\s*"[^"]*"\s*$/)) {
+          return '❌ შეცდომა: არ არის დახურული ფრჩხილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - დახურული ფრჩხილი ) აუცილებელია!';
+        }
+        
+        // შემოწმება: print("dddd) - არ არის დახურული ბრჭყალი
+        if (codeStr.match(/print\s*\(\s*"[^"]*\)/)) {
+          return '❌ შეცდომა: არ არის დახურული ბრჭყალი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - დახურული ბრჭყალი " აუცილებელია!';
+        }
+        
+        // შემოწმება: print(dddd) - ტექსტი ბრჭყალების გარეშეა
+        if (codeStr.match(/print\s*\(\s*[^"')\d\s][^)]*\)/) && !codeStr.match(/print\s*\(\s*["\']/) && !codeStr.match(/print\s*\(\s*\d/)) {
+          return '❌ შეცდომა: ტექსტი "ddd" ბრჭყალებში უნდა იყოს\n💡 რჩევა: დაწერეთ print("ddd") - ტექსტი ბრჭყალებში უნდა იყოს!';
+        }
+        
+        // შემოწმება: print"dddd" - არგუმენტი ფრჩხილებში უნდა იყოს
+        if (codeStr.match(/print\s*"[^"]*"/) && !codeStr.match(/print\s*\(\s*"/)) {
+          return '❌ შეცდომა: print ფუნქციის არგუმენტი ფრჩხილებში უნდა იყოს\n💡 რჩევა: დაწერეთ print("ddd") - ფრჩხილები ( ) აუცილებელია!';
+        }
+        
+        // ფრჩხილების გარეშე - print Hello World
+        if (codeLower.includes('print ') && !codeLower.includes('print(')) {
+          return '❌ შეცდომა: print ფუნქციას ფრჩხილები არ აქვს\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - ფრჩხილები აუცილებელია!';
+        }
+        
+        // ფრჩხილების დახურვის შემოწმება - ზოგადი შემოწმება
+        const openParens = (codeStr.match(/\(/g) || []).length;
+        const closeParens = (codeStr.match(/\)/g) || []).length;
+        if (openParens > closeParens) {
+          return '❌ შეცდომა: ფრჩხილები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ღია ფრჩხილი ( დახურულია )';
+        }
+        
+        // ბრჭყალების დახურვის შემოწმება - ზოგადი შემოწმება
+        const openQuotes = (codeStr.match(/"/g) || []).length;
+        const openSingleQuotes = (codeStr.match(/'/g) || []).length;
+        
+        if (openQuotes % 2 !== 0) {
+          return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (") დახურულია';
+        }
+        
+        if (openSingleQuotes % 2 !== 0) {
+          return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (\') დახურულია';
+        }
+        
+        // არასწორი სინტაქსი - ზოგადი შემოწმება (მხოლოდ თუ სხვა შემოწმებები ვერ გაიარა)
+        const printRegex = /print\s*\(\s*["\'].*["\']\s*\)/;
+        const printNumberRegex = /print\s*\(\s*\d/;
+        const printExpressionRegex = /print\s*\(\s*[\d\s\+\-\*\/\(\)]+\)/;
+        
+        if (!printRegex.test(codeStr) && !printNumberRegex.test(codeStr) && !printExpressionRegex.test(codeStr)) {
+          return '❌ შეცდომა: print() ფუნქცია არასწორად არის დაწერილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - მაგალითად: print("Hello World")';
+        }
+      }
+      
+      // თუ print ფუნქცია საერთოდ არ არის
+      if (!codeLower.includes('print')) {
+        return '❌ შეცდომა: კოდში print() ფუნქცია არ არის\n💡 რჩევა: გამოიყენეთ print() ფუნქცია ტექსტის გამოსაჩენად\n📝 მაგალითი: print("გამარჯობა მსოფლიო!")';
+      }
+      
+      return '❌ შეცდომა: კოდში პრობლემაა\n💡 რჩევა: ყურადღებით შეამოწმეთ კოდი და სცადეთ ხელახლა';
+    }
+
+    // ფუნქცია შეცდომების მარტივად გასაგებად გადასაქცევად
+    function simplifyError(errorText) {
+      const error = String(errorText);
+      
+      // Print ფუნქციასთან დაკავშირებული შეცდომები
+      if (error.includes('NameError') && error.includes('print')) {
+        return '❌ შეცდომა: print ფუნქცია არასწორად არის დაწერილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - print მცირე ასოებით და ფრჩხილებით!';
+      }
+      
+      if (error.includes('SyntaxError') && error.includes('print')) {
+        return '❌ შეცდომა: print ფუნქცია არასწორად არის დაწერილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - ტექსტი ბრჭყალებში უნდა იყოს!';
+      }
+      
+      // SyntaxError შემთხვევები
+      if (error.includes('SyntaxError: unterminated string literal')) {
+        return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (") ან (\') დახურულია';
+      }
+      
+      if (error.includes('SyntaxError: invalid syntax')) {
+        return '❌ შეცდომა: არასწორი სინტაქსი\n💡 რჩევა: შეამოწმეთ, რომ ყველა ფრჩხილი, ბრჭყალი და ორწერტილი სწორად არის დაწერილი';
+      }
+      
+      if (error.includes('SyntaxError: EOL while scanning string literal')) {
+        return '❌ შეცდომა: ბრჭყალები არ არის დახურული\n💡 რჩევა: შეამოწმეთ, რომ ყველა ბრჭყალი (") ან (\') დახურულია';
+      }
+      
+      if (error.includes('IndentationError')) {
+        return '❌ შეცდომა: არასწორი შეწევა\n💡 რჩევა: გამოიყენეთ 4 space (ცარიელი ადგილი) ან Tab ღილაკი შეწევისთვის';
+      }
+      
+      // NameError შემთხვევები
+      if (error.includes('NameError: name') && error.includes('is not defined')) {
+        const match = error.match(/name '([^']+)' is not defined/);
+        if (match) {
+          const varName = match[1].toLowerCase();
+          if (varName.includes('print')) {
+            return '❌ შეცდომა: print ფუნქცია არასწორად არის დაწერილი\n💡 რჩევა: დაწერეთ print("თქვენი ტექსტი") - print მცირე ასოებით!';
+          }
+          return `❌ შეცდომა: ცვლადი '${match[1]}' არ არის განსაზღვრული\n💡 რჩევა: შეამოწმეთ, რომ ცვლადი სწორად არის დაწერილი ან ჯერ განსაზღვრეთ ის`;
+        }
+      }
+      
+      // TypeError შემთხვევები
+      if (error.includes('TypeError: unsupported operand type(s)')) {
+        return '❌ შეცდომა: არასწორი ტიპის ოპერაცია\n💡 რჩევა: შეამოწმეთ, რომ რიცხვებთან მუშაობისას ყველაფერი რიცხვია';
+      }
+      
+      // ValueError შემთხვევები
+      if (error.includes('ValueError')) {
+        return '❌ შეცდომა: არასწორი მნიშვნელობა\n💡 რჩევა: შეამოწმეთ, რომ შეყვანილი მნიშვნელობა სწორია';
+      }
+      
+      // ZeroDivisionError
+      if (error.includes('ZeroDivisionError')) {
+        return '❌ შეცდომა: ნულზე გაყოფა\n💡 რჩევა: არ შეიძლება რიცხვის ნულზე გაყოფა';
+      }
+      
+      // თუ სხვა შეცდომაა, მარტივად ვაჩვენებთ
+      if (error.includes('Traceback')) {
+        return '❌ შეცდომა: კოდში პრობლემაა\n💡 რჩევა: ყურადღებით შეამოწმეთ კოდი და სცადეთ ხელახლა';
+      }
+      
+      // სხვა შემთხვევები
+      return '❌ შეცდომა: ' + error;
+    }
+
+    // ფუნქცია დავალების შესამოწმებლად
+    function checkAssignment(code, output) {
+      const codeStr = String(code).trim();
+      const codeLower = codeStr.toLowerCase();
+      const outputStr = String(output).toLowerCase().trim();
+      
+      // შევამოწმებთ, რომ კოდი არ არის ცარიელი
+      if (codeStr.length === 0) {
+        return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+      }
+      
+      // შევამოწმებთ print() ფუნქციის სწორ გამოყენებას
+      if (!codeLower.includes('print(')) {
+        // შევამოწმებთ, არის თუ არა არასწორი ვარიანტები
+        if (codeLower.includes('print')) {
+          if (codeLower.includes('print ')) {
+            return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+          } else if (codeLower.includes('print(') && !codeLower.includes('print("') && !codeLower.includes("print('")) {
+            return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+          } else {
+            return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+          }
+        } else {
+          return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+        }
+      }
+      
+      // შევამოწმებთ print() ფუნქციის სინტაქსს
+      const printRegex = /print\s*\(\s*["\'].*["\']\s*\)/;
+      if (!printRegex.test(codeStr)) {
+        if (codeLower.includes('print(')) {
+          return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+        }
+      }
+      
+      // შევამოწმებთ, რომ კოდი წარმატებით შესრულდა (შეცდომა არ იყო)
+      if (outputStr.includes('❌') || outputStr.includes('შეცდომა')) {
+        return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+      }
+      
+      // შევამოწმებთ, რომ რაიმე ტექსტი აჩვენეს
+      if (outputStr.length === 0 || outputStr === 'none' || outputStr === 'null') {
+        return { success: false, simpleMessage: 'მიზანი მიღწეული არაა, სცადეთ ხელახლა' };
+      }
+      
+      // თუ ყველაფერი კარგადაა
+      return { 
+        success: true, 
+        simpleMessage: '🎉 გილოცავთ! დავალება წარმატებით შესრულდა!\n✨ თქვენ ისწავლეთ print() ფუნქციის გამოყენება!\n🌟 შესანიშნავია! განაგრძეთ პროგრამირება!' 
+      };
+    }
+
+    // ფუნქცია სტატუსის გამოსაჩენად
+    function showAssignmentStatus(success, simpleMessage) {
+      const statusDiv = document.getElementById('assignmentStatus');
+      const statusIcon = document.getElementById('statusIcon');
+      const statusText = document.getElementById('statusText');
+      
+      statusDiv.style.display = 'block';
+      
+      if (success) {
+        statusDiv.style.background = '#d1fae5';
+        statusDiv.style.borderLeftColor = '#10b981';
+        statusIcon.textContent = '🎉';
+        statusText.style.color = '#065f46';
+      } else {
+        statusDiv.style.background = '#fef3c7';
+        statusDiv.style.borderLeftColor = '#f59e0b';
+        statusIcon.textContent = '❌';
+        statusText.style.color = '#92400e';
+      }
+      
+      statusText.textContent = simpleMessage;
+    }
+
+    runBtn.addEventListener('click', async ()=>{
+      if(!pyodide){ appendOutput('Pyodide არ არის მზად.\n'); return; }
+      
+      // ვიღებთ კოდს და ვწმინდავთ ტერმინალს
+      const code = editor.getValue();
+      clearTerminal();
+      
+      // ვწმინდავთ წინა სტატუსს
+      document.getElementById('assignmentStatus').style.display = 'none';
+      
+      try{
+        isBusy = true;
+        setInterpreterState('busy');
+        
+        // ვაქტივებთ output-ის ჩაწერას
+        let capturedOutput = '';
+        let capturedError = '';
+        const originalAppendOutput = appendOutput;
+        appendOutput = function(text) {
+          capturedOutput += String(text);
+          originalAppendOutput(text);
+        };
+        
+        // run Python code asynchronously so our async stdin handler works
+        await pyodide.runPythonAsync(code);
+        
+        // ვაბრუნებთ ორიგინალურ ფუნქციას
+        appendOutput = originalAppendOutput;
+        
+        // ვამოწმებთ დავალებას ფინალურად
+        const finalResult = checkAssignment(code, capturedOutput);
+        showAssignmentStatus(finalResult.success, finalResult.simpleMessage);
+        
+        // თუ დავალება არ არის შესრულებული, ვაჩვენებთ დეტალურ შეცდომას ტერმინალში
+        if (!finalResult.success && capturedOutput.length === 0) {
+          const detailedError = getDetailedErrorExplanation(code, '');
+          appendOutput(detailedError + '\n');
+        }
+        
+      }catch(err){
+        // ვიღებთ შეცდომის ტექსტს
+        const errorText = String(err);
+        
+        // ვაჩვენებთ დეტალურ შეცდომის ახსნას ტერმინალში
+        const detailedError = getDetailedErrorExplanation(code, errorText);
+        appendOutput(detailedError + '\n');
+        
+        // შეცდომის შემთხვევაში ვამოწმებთ დავალებას
+        const assignmentResult = checkAssignment(code, errorText);
+        showAssignmentStatus(assignmentResult.success, assignmentResult.simpleMessage);
+      }
+      isBusy = false;
+      setInterpreterState('ok');
+    });
+
+    stopBtn.addEventListener('click', ()=>{
+      appendOutput('[Stop requested]\n');
+      // Note: forcefully interrupting Pyodide/CPython isn't trivial. This button is informational.
+    });
+
+    clearCodeBtn.addEventListener('click', ()=>{ editor.setValue(''); });
+    clearOutputBtn.addEventListener('click', ()=>{ clearTerminal(); });
+
+    // Theme (day/night) toggle with pictograms
+    let isDay = false; // default dark
+    function applyTheme(){
+      if(isDay){
+        pyWrap.classList.add('day');
+        editor.setOption('theme','eclipse'); // light theme
+        themeToggle.textContent = '☀️';
+        themeToggle.title = 'დღე';
+      }else{
+        pyWrap.classList.remove('day');
+        editor.setOption('theme','material-darker'); // dark theme
+        themeToggle.textContent = '🌙';
+        themeToggle.title = 'ღამე';
+      }
+    }
+    themeToggle.addEventListener('click', ()=>{
+      isDay = !isDay;
+      applyTheme();
+    });
+    applyTheme();
+
+    // Allow clicking terminal to focus last input
+    terminal.addEventListener('click', () => {
+      const inputEl = terminal.querySelector('input.terminal-input');
+      if(inputEl) inputEl.focus();
+    });
+
+    // If there's a pending input resolver exposed (edge cases), provide a global cancel on Escape
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape' && pendingInputResolve){
+        pendingInputResolve('');
+      }
+    });
+
+    // NOTE: removed "stdout / stderr" labels and "objects=..." per your request.
+  })();
+  </script>
+</body>
+</html>
